@@ -1,19 +1,55 @@
 # mysrconfig
 
-Minimal Shadowrocket split-routing profile for Iran.
+Iran split-routing profiles for Shadowrocket and v2rayN.
 
-## Behavior
+## Common behavior
 
 - Iranian domains and Iranian destination networks: `DIRECT`
+- Private and LAN traffic: `DIRECT`
 - Everything else: `PROXY`
 - No advertising, malware, phishing, rewrite, or content-blocking rules
-- IPv6 disabled to avoid unplanned IPv6 bypasses on mixed networks
-- Proxy-bound QUIC blocked so affected clients retry over proxyable TCP
-- Unsupported proxy UDP is rejected rather than silently sent directly
+- Provider nodes and subscriptions are not included
 
-## DNS
+## Shadowrocket for iPhone/iPad
 
-Direct traffic uses the free DNS addresses published by both Begzar and Shecan. Shadowrocket queries the configured addresses in parallel and uses the first successful response. The iOS/system resolver assigned by the ISP is configured only as the fallback.
+Configuration:
+
+```text
+https://raw.githubusercontent.com/cursedwraith/mysrconfig/main/iran.conf
+```
+
+The Shadowrocket profile uses Begzar and Shecan for direct/domestic DNS, with the iOS/system resolver as fallback. It uses native Shadowrocket Iran domain rules plus current Iran CIDR/ASN data and `GEOIP,IR`.
+
+Important Shadowrocket characteristics:
+
+- IPv6 starts disabled
+- Proxy-bound QUIC is blocked for TCP reliability
+- Unsupported proxy UDP is rejected instead of leaking direct
+- `GEOIP,IR` and IP rule sets use `no-resolve`
+
+## v2rayN for macOS
+
+Full setup guide:
+
+```text
+https://github.com/cursedwraith/mysrconfig/blob/main/v2rayn/README.md
+```
+
+Importable routing rules:
+
+```text
+https://raw.githubusercontent.com/cursedwraith/mysrconfig/main/v2rayn/iran-routing.json
+```
+
+Optional routing-template source:
+
+```text
+https://raw.githubusercontent.com/cursedwraith/mysrconfig/main/v2rayn/template.json
+```
+
+The v2rayN profile is designed primarily for v2rayN 7.24.4 or newer with the Xray core and TUN on macOS. It adds an explicit top-priority Zoom proxy rule, leaves UDP available for meetings, uses `AsIs` routing to avoid unnecessary local DNS classification, and relies on v2rayN's built-in Iran regional Geo source.
+
+## Domestic DNS addresses
 
 Begzar:
 
@@ -26,18 +62,17 @@ Shecan free:
 - `178.22.122.100`
 - `185.51.200.2`
 
-These services publish plain DNS IP addresses; this profile does not invent an unsupported `https://.../dns-query` endpoint. Proxy-routed destination names are resolved remotely by the selected proxy.
+These are plain DNS server IP addresses. The profiles do not invent unsupported `https://.../dns-query` endpoints for Begzar or Shecan.
 
 ## Routing data
 
-- Native Shadowrocket domain rules: `sub-kek/shadowrocket-lists`
-- Iran CIDR and ASN data: `Chocolate4U/Iran-clash-rules`
-- Shadowrocket built-in `GEOIP,IR` is retained as a final IP-data fallback
+Shadowrocket uses:
 
-The Chocolate4U domain payload is Clash-formatted (`+.domain`) and is not referenced as a Shadowrocket `RULE-SET`. The existing native Shadowrocket domain list is used instead, while the compatible CIDR and ASN sources supplement `GEOIP`.
+- `sub-kek/shadowrocket-lists` for native Shadowrocket Iran domain rules
+- `Chocolate4U/Iran-clash-rules` for compatible Iran CIDR and ASN rules
+- Shadowrocket's built-in `GEOIP,IR` as an additional IP-data fallback
 
-## Import
+v2rayN uses:
 
-```text
-https://raw.githubusercontent.com/cursedwraith/mysrconfig/main/iran.conf
-```
+- `Chocolate4U/Iran-v2ray-rules` for `geosite:category-ir`, `geoip:ir`, and private-network Geo tags
+- this repository's custom rule array instead of the upstream Iran routing template, because the upstream template contains unrelated ad blocking, BitTorrent direct routing, and UDP/443 blocking
