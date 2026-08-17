@@ -1,0 +1,53 @@
+[
+  {
+    "remarks": "Zoom always through proxy",
+    "outboundTag": "proxy",
+    "domain": [
+      "domain:zoom.us",
+      "domain:zoom.com",
+      "domain:zoomapp.cloud"
+    ],
+    "enabled": true
+  },
+  {
+    "remarks": "Private and LAN IP addresses direct",
+    "outboundTag": "direct",
+    "ip": [
+      "geoip:private"
+    ],
+    "enabled": true
+  },
+  {
+    "remarks": "Private and LAN domains direct",
+    "outboundTag": "direct",
+    "domain": [
+      "geosite:private"
+    ],
+    "enabled": true
+  },
+  {
+    "remarks": "Iranian domains direct",
+    "outboundTag": "direct",
+    "domain": [
+      "domain:ir",
+      "domain:xn--mgba3a4f16a",
+      "geosite:category-ir"
+    ],
+    "enabled": true
+  },
+  {
+    "remarks": "Iranian destination IP addresses direct",
+    "outboundTag": "direct",
+    "ip": [
+      "geoip:ir"
+    ],
+    "enabled": true
+  },
+  {
+    "remarks": "Everything else through proxy",
+    "outboundTag": "proxy",
+    "port": "0-65535",
+    "network": "tcp,udp",
+    "enabled": true
+  }
+]
