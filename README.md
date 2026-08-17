@@ -1,0 +1,2 @@
+# mysrconfig
+my shadowrocket config
