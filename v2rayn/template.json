@@ -1,0 +1,10 @@
+{
+  "version": "IR-CUSTOM-1",
+  "routingItems": [
+    {
+      "remarks": "Iran direct, everything else proxy, Zoom forced through proxy",
+      "domainStrategy": "AsIs",
+      "url": "https://raw.githubusercontent.com/cursedwraith/mysrconfig/main/v2rayn/iran-routing.json"
+    }
+  ]
+}
