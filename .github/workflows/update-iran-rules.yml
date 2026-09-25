@@ -1,0 +1,109 @@
+name: Update Iran routing rules
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "37 2 * * *"
+  push:
+    paths:
+      - ".github/workflows/update-iran-rules.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-iran-routing-rules
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Download and validate upstream data
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p rules .tmp-rules
+
+          curl -fL --retry 3 --retry-delay 2 --connect-timeout 20 --max-time 180             -o .tmp-rules/domains.raw             "https://github.com/bootmortis/iran-hosted-domains/releases/latest/download/surge_ruleset_other.txt"
+          curl -fL --retry 3 --retry-delay 2 --connect-timeout 20 --max-time 60             -o .tmp-rules/domains.sha256             "https://github.com/bootmortis/iran-hosted-domains/releases/latest/download/surge_ruleset_other.txt.sha256"
+
+          (
+            cd .tmp-rules
+            # Upstream hash file names the release asset; verify before parsing it.
+            sed -E 's#  \*?surge_ruleset_other\.txt$#  domains.raw#' domains.sha256 > domains.check
+            sha256sum -c domains.check
+          )
+
+          curl -fL --retry 3 --retry-delay 2 --connect-timeout 20 --max-time 120             -o .tmp-rules/cidr.raw             "https://raw.githubusercontent.com/Chocolate4U/Iran-clash-rules/release/ircidr.txt"
+          curl -fL --retry 3 --retry-delay 2 --connect-timeout 20 --max-time 120             -o .tmp-rules/asn.raw             "https://raw.githubusercontent.com/Chocolate4U/Iran-clash-rules/release/irasn.txt"
+
+      - name: Build Shadowrocket rule sets
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          tr -d '\r' < .tmp-rules/domains.raw             | grep -E '^DOMAIN-SUFFIX,[A-Za-z0-9._-]+$'             | grep -Eiv '^DOMAIN-SUFFIX,(ir|xn--mgba3a4f16a)$'             | LC_ALL=C sort -u > .tmp-rules/domains.rules
+
+          tr -d '\r' < .tmp-rules/cidr.raw             | grep -E '^[0-9]{1,3}(\.[0-9]{1,3}){3}/[0-9]{1,2}$'             | sed 's/^/IP-CIDR,/'             | LC_ALL=C sort -u > .tmp-rules/cidr4.rules
+
+          tr -d '\r' < .tmp-rules/cidr.raw             | grep -E '^[0-9A-Fa-f:]+/[0-9]{1,3}$'             | sed 's/^/IP-CIDR6,/'             | LC_ALL=C sort -u > .tmp-rules/cidr6.rules
+
+          cat .tmp-rules/cidr4.rules .tmp-rules/cidr6.rules             | LC_ALL=C sort -u > .tmp-rules/cidr.rules
+
+          tr -d '\r' < .tmp-rules/asn.raw             | grep -E '^IP-ASN,[0-9]+$'             | LC_ALL=C sort -u > .tmp-rules/asn.rules
+
+          domain_count="$(wc -l < .tmp-rules/domains.rules)"
+          cidr_count="$(wc -l < .tmp-rules/cidr.rules)"
+          asn_count="$(wc -l < .tmp-rules/asn.rules)"
+
+          echo "Validated rules: domains=$domain_count cidr=$cidr_count asn=$asn_count"
+
+          test "$domain_count" -ge 5000
+          test "$cidr_count" -ge 500
+          test "$asn_count" -ge 300
+
+          {
+            echo "# Shadowrocket Iranian non-.ir domain rules"
+            echo "# Source: bootmortis/iran-hosted-domains, latest surge_ruleset_other.txt"
+            echo "# Generated automatically. Do not edit by hand."
+            echo
+            cat .tmp-rules/domains.rules
+          } > rules/iran-domains.list
+
+          {
+            echo "# Shadowrocket Iranian network rules"
+            echo "# Source: Chocolate4U/Iran-clash-rules release/ircidr.txt"
+            echo "# Generated automatically. Do not edit by hand."
+            echo
+            cat .tmp-rules/cidr.rules
+          } > rules/iran-cidr.list
+
+          {
+            echo "# Shadowrocket Iranian ASN rules"
+            echo "# Source: Chocolate4U/Iran-clash-rules release/irasn.txt"
+            echo "# Generated automatically. Do not edit by hand."
+            echo
+            cat .tmp-rules/asn.rules
+          } > rules/iran-asn.list
+
+      - name: Commit updates
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add rules/iran-domains.list rules/iran-cidr.list rules/iran-asn.list
+
+          if git diff --cached --quiet; then
+            echo "Rule data is already current."
+            exit 0
+          fi
+
+          git commit -m "chore: refresh Iran routing rules"
+          git push

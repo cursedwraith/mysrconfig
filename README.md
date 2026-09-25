@@ -18,14 +18,49 @@ Configuration:
 https://raw.githubusercontent.com/cursedwraith/mysrconfig/main/iran.conf
 ```
 
-The Shadowrocket profile uses Begzar and Shecan for direct/domestic DNS, with the iOS/system resolver as fallback. It uses native Shadowrocket Iran domain rules plus current Iran CIDR/ASN data and `GEOIP,IR`.
+The Shadowrocket profile is optimized around a simple rule: keep domestic Iranian traffic direct and proxy everything else.
+
+### Routing order
+
+1. LAN/private traffic -> `DIRECT`
+2. `.ir` and Persian IDN TLD -> `DIRECT`
+3. Iranian non-`.ir` domain database -> `DIRECT`
+4. Iranian CIDR and ASN data -> `DIRECT`
+5. Shadowrocket `GEOIP,IR` fallback -> `DIRECT`
+6. Everything unmatched -> `PROXY`
+
+IP-based Iran rules use `no-resolve`, so unknown foreign hostnames are not locally resolved merely to classify them.
+
+### DNS
+
+- Begzar is the primary resolver for direct/domestic traffic.
+- Shecan and then the iOS/system resolver are fallbacks.
+- Plain DNS on port 53 is intercepted by Shadowrocket with `hijack-dns = :53`.
+- Proxy-bound hostnames are left to the proxy path rather than intentionally pre-resolving every foreign domain locally.
+
+### Generated Shadowrocket rule data
+
+This repository maintains native Shadowrocket-compatible rule files:
+
+```text
+rules/iran-domains.list
+rules/iran-cidr.list
+rules/iran-asn.list
+```
+
+Sources:
+
+- `bootmortis/iran-hosted-domains` -> non-`.ir` Iranian hosted domains
+- `Chocolate4U/Iran-clash-rules` -> Iranian CIDR and ASN data
+
+A GitHub Actions workflow validates and refreshes the files every day. The domain release hash is verified, malformed lines are discarded, minimum dataset sizes are enforced, IPv4 CIDRs become `IP-CIDR`, and IPv6 CIDRs become `IP-CIDR6`.
 
 Important Shadowrocket characteristics:
 
 - IPv6 starts disabled
 - Proxy-bound QUIC is blocked for TCP reliability
-- Unsupported proxy UDP is rejected instead of leaking direct
-- `GEOIP,IR` and IP rule sets use `no-resolve`
+- Unsupported proxy UDP is rejected instead of falling back to DIRECT
+- Iran IP rules use `no-resolve`
 
 ## v2rayN for macOS
 
@@ -62,17 +97,4 @@ Shecan free:
 - `178.22.122.100`
 - `185.51.200.2`
 
-These are plain DNS server IP addresses. The profiles do not invent unsupported `https://.../dns-query` endpoints for Begzar or Shecan.
-
-## Routing data
-
-Shadowrocket uses:
-
-- `sub-kek/shadowrocket-lists` for native Shadowrocket Iran domain rules
-- `Chocolate4U/Iran-clash-rules` for compatible Iran CIDR and ASN rules
-- Shadowrocket's built-in `GEOIP,IR` as an additional IP-data fallback
-
-v2rayN uses:
-
-- `Chocolate4U/Iran-v2ray-rules` for `geosite:category-ir`, `geoip:ir`, and private-network Geo tags
-- this repository's custom rule array instead of the upstream Iran routing template, because the upstream template contains unrelated ad blocking, BitTorrent direct routing, and UDP/443 blocking
+These are plain DNS server IP addresses. The profiles do not invent unsupported HTTPS DNS endpoints for Begzar or Shecan.
