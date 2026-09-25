@@ -1,5 +1,6 @@
 # Shadowrocket Iranian ASN rules
 # Source: Chocolate4U/Iran-clash-rules release/irasn.txt
+# Generated automatically. Do not edit by hand.
 
 IP-ASN,12660
 IP-ASN,12697

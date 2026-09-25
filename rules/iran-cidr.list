@@ -1,6 +1,6 @@
 # Shadowrocket Iranian network rules
 # Source: Chocolate4U/Iran-clash-rules release/ircidr.txt
-# IPv4 entries are converted to IP-CIDR; IPv6 entries to IP-CIDR6.
+# Generated automatically. Do not edit by hand.
 
 IP-CIDR,10.202.10.10/31
 IP-CIDR,10.202.10.102/32
